@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patorius Quest</title>
+<style>
+  :root{
+    --panel:#141923;--panel2:#1c2330;--border:#2b3447;--txt:#e8edf5;--muted:#8a94a8;
+    --accent:#5aa7ff;--ok:#43c768;--bad:#f8635a;--gold:#e8b94a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,Arial,sans-serif;}
+  body{background:#0b0e14;color:var(--txt);min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .screen{display:none;max-width:680px;width:94vw;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:32px;box-shadow:0 24px 80px rgba(0,0,0,.6);}
+  .screen.active{display:block;}
+  h1{font-size:22px;font-weight:700;margin-bottom:4px;}
+  h1 span{color:var(--gold);}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:20px;}
+  p{font-size:14px;line-height:1.65;}
+  .box{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:16px;margin:14px 0;font-size:13.5px;line-height:1.6;}
+  .box b{color:var(--gold);}
+  .quote{border-left:3px solid var(--accent);padding:10px 14px;background:var(--panel2);border-radius:0 10px 10px 0;font-style:italic;font-size:14px;margin:12px 0;}
+  .tag{display:inline-block;background:#1a2941;color:var(--accent);border:1px solid #2b4663;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600;margin:3px 4px 0 0;}
+  button{background:var(--gold);color:#1a1405;border:none;border-radius:10px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:14px;transition:filter .15s,transform .1s;}
+  button:hover{filter:brightness(1.12);transform:translateY(-1px);}
+  input[type=text]{width:100%;padding:13px 14px;font-size:14px;border:1px solid var(--border);border-radius:10px;background:var(--panel2);color:var(--txt);outline:none;margin-top:8px;}
+  input[type=text]:focus{border-color:var(--gold);}
+  .rule{border:1px dashed var(--gold);color:var(--gold);border-radius:10px;padding:12px;text-align:center;font-weight:600;font-size:14px;margin:14px 0;}
+  .say{display:flex;gap:12px;align-items:center;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:13px;}
+  .say b{color:var(--gold);}
+  .say canvas{flex-shrink:0;}
+
+  #gameWrap{display:none;position:fixed;inset:0;}
+  #gameWrap.active{display:block;}
+  #cv{position:absolute;inset:0;display:block;}
+  #hud{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:30;}
+  .hudItem{background:rgba(16,20,30,.82);border:1px solid var(--border);backdrop-filter:blur(8px);border-radius:10px;padding:7px 16px;font-size:13px;font-weight:700;text-align:center;}
+  .hudItem small{display:block;font-weight:500;color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:1.4px;}
+  #hudStreakV{color:var(--gold);}
+  #hint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(16,20,30,.82);border:1px solid var(--border);border-radius:10px;padding:8px 16px;font-size:12px;color:var(--muted);z-index:30;backdrop-filter:blur(8px);}
+  kbd{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:1px 7px;font-size:11px;color:var(--txt);}
+  #toast{position:absolute;top:70px;left:50%;transform:translateX(-50%);background:rgba(16,20,30,.9);border:1px solid var(--gold);color:var(--gold);border-radius:10px;padding:8px 18px;font-size:13px;font-weight:600;z-index:30;opacity:0;transition:opacity .4s;pointer-events:none;}
+
+  #modal{position:fixed;inset:0;background:rgba(4,6,10,.8);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;z-index:50;}
+  #modal.active{display:flex;}
+  .modalCard{background:var(--panel);border:1px solid var(--border);border-top:3px solid var(--gold);border-radius:16px;max-width:560px;width:92vw;padding:26px;max-height:88vh;overflow:auto;box-shadow:0 30px 90px rgba(0,0,0,.7);}
+  .modalCard .label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:10px;font-weight:700;}
+  .duoBtns{display:flex;gap:10px;}
+  .bResolve{background:var(--ok);color:#06220e;}
+  .bDerive{background:var(--accent);color:#081526;}
+  .fb{margin-top:16px;padding:14px;border-radius:10px;font-size:13.5px;line-height:1.6;display:none;}
+  .fb.ok{background:rgba(67,199,104,.1);border:1px solid var(--ok);color:#8ce6a4;}
+  .fb.bad{background:rgba(248,99,90,.1);border:1px solid var(--bad);color:#ffa49d;}
+  .fb .cdu{display:inline-block;margin-top:8px;background:#1a2941;border:1px solid #2b4663;color:var(--accent);padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;font-style:normal;}
+
+  .podio{display:flex;justify-content:center;align-items:flex-end;gap:10px;margin:18px 0 8px;}
+  .pod{text-align:center;border-radius:10px 10px 0 0;padding:10px;font-size:12px;font-weight:700;min-width:96px;color:#141005;}
+  .pod1{background:linear-gradient(180deg,#f3cf6a,#c0952e);height:92px;}
+  .pod2{background:linear-gradient(180deg,#ccd6e4,#8d9aad);height:72px;}
+  .pod3{background:linear-gradient(180deg,#d9986a,#a86a3f);height:58px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px;}
+  th{background:var(--panel2);color:var(--muted);padding:9px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;}
+  td{padding:9px;border-bottom:1px solid var(--border);}
+  tr.me td{background:rgba(232,185,74,.08);color:var(--gold);font-weight:700;}
+  .tdiBig{font-size:40px;font-weight:900;text-align:center;margin:10px 0;}
+  .tOk{color:var(--ok);} .tBad{color:var(--bad);}
+  .clearBtn{background:none;border:none;color:var(--bad);font-size:11px;text-decoration:underline;cursor:pointer;width:auto;padding:4px;margin-top:10px;opacity:.7;}
+
+  #pad{position:absolute;bottom:20px;right:20px;z-index:30;display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px);gap:4px;opacity:.85;}
+  #pad div{background:rgba(16,20,30,.85);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted);user-select:none;touch-action:none;}
+  #pad div:active{background:var(--gold);color:#141005;}
+  @media(hover:hover) and (pointer:fine){#pad{display:none;}}
+</style>
+</head>
+<body>
+
+<div id="s0" class="screen active">
+  <h1>Patorius <span>Quest</span></h1>
+  <p class="sub">¿Derivo o Resuelvo? — Reto TDI · Equipo Nicolukas</p>
+  <div class="say"><canvas class="avatar" width="52" height="60"></canvas>
+    <span><b>Sir Patorius:</b> Bienvenido al Reino de las CDU. Recorre el mapa, encuentra los 10 pergaminos y decide con criterio. Tu nombre para el ranking:</span>
+  </div>
+  <input type="text" id="playerName" placeholder="Nombre o alias (ej: kjaimes)" maxlength="20">
+  <button onclick="saveName()">Continuar</button>
+</div>
+
+<div id="s1" class="screen">
+  <h1>El caso que nos trajo aquí</h1>
+  <p class="sub">Contexto: una derivación incorrecta</p>
+  <div class="quote">"No comprendo por qué no tengo activado el Llega Hoy, tenemos casi nulas las ventas con retraso Flex."</div>
+  <p>Un rep escuchó <b>"Flex"</b>, <b>"retraso"</b>, <b>"Llega Hoy"</b>... y derivó el caso a <b>Envíos Mature</b>. La derivación fue <b>incorrecta</b>.</p>
+  <div class="box">
+    La <b>consulta raíz</b> era: <i>¿por qué mi publicación no tiene el destaque (Llega Hoy)?</i> Eso lo resolvemos nosotros:
+    <div style="margin-top:8px;">
+      <span class="tag">Reputación ME Informativas: Por qué no ofrece destaque</span>
+      <span class="tag">Reputación ME Informativas: Todo sobre el destaque de publicaciones</span>
+    </div>
+  </div>
+  <div class="box"><b>¿Por qué importa?</b><br>· Cada derivación incorrecta sube nuestra <b>TDI</b> (target ≤5%).<br>· El cliente rebota entre colas.<br>· Genera detractores y golpea el NPS.</div>
+  <button onclick="go('s2')">Ver la Regla de Oro</button>
+</div>
+
+<div id="s2" class="screen">
+  <h1>La Regla de Oro</h1>
+  <div class="rule">"No derives por palabras, deriva por consulta raíz."</div>
+  <div class="box"><b>1.</b> ¿Qué quiere <b>lograr</b> realmente el cliente?<br><b>2.</b> ¿Existe una <b>CDU nuestra</b> que cubra esa consulta raíz? Si sí, se resuelve acá.</div>
+  <div class="say"><canvas class="avatar" width="52" height="60"></canvas>
+    <span><b>Sir Patorius:</b> Muévete con flechas o WASD. Rocas, árboles y murallas bloquean el paso. Encuentra los 10 pergaminos.</span>
+  </div>
+  <button onclick="startGame()">Entrar al reino</button>
+</div>
+
+<div id="gameWrap">
+  <canvas id="cv"></canvas>
+  <div id="hud">
+    <div class="hudItem"><small>Jugador</small><span id="hudName">—</span></div>
+    <div class="hudItem"><small>Puntos</small><span id="hudScore">0</span></div>
+    <div class="hudItem"><small>Racha</small><span id="hudStreakV">0</span></div>
+    <div class="hudItem"><small>Pergaminos</small><span id="hudProg">0/10</span></div>
+  </div>
+  <div id="toast"></div>
+  <div id="hint">Muévete con <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> o <kbd>WASD</kbd> · Acércate a un pergamino</div>
+  <div id="pad">
+    <div></div><div data-k="up">▲</div><div></div>
+    <div data-k="left">◀</div><div></div><div data-k="right">▶</div>
+    <div></div><div data-k="down">▼</div><div></div>
+  </div>
+</div>
+
+<div id="modal">
+  <div class="modalCard">
+    <div class="label" id="mLabel">Contacto entrante</div>
+    <div class="say"><canvas class="avatar" width="52" height="60"></canvas><span id="mPato"></span></div>
+    <div class="quote" id="mCase"></div>
+    <div class="duoBtns" id="mBtns">
+      <button class="bResolve" onclick="answer('R')">Lo resuelvo acá</button>
+      <button class="bDerive" onclick="answer('D')">Derivo a Envíos Mature</button>
+    </div>
+    <div class="fb" id="mFb"></div>
+    <button id="mNext" style="display:none;" onclick="closeModal()">Volver al reino</button>
+  </div>
+</div>
+
+<div id="result" class="screen">
+  <h1>Fin del recorrido</h1>
+  <p class="sub" id="rSub"></p>
+  <div class="tdiBig" id="rTdi"></div>
+  <div class="say"><canvas class="avatar" width="52" height="60"></canvas><span id="rMsg"></span></div>
+  <h1 style="margin-top:22px;font-size:17px;">Ranking del reino</h1>
+  <p class="sub">Acumula a todos los que jueguen en este navegador.</p>
+  <div class="podio" id="podio"></div>
+  <table id="rkTable"></table>
+  <button onclick="location.reload()">Siguiente jugador</button>
+  <button class="clearBtn" onclick="clearRanking()">Borrar ranking (solo líder)</button>
+</div>
+
+<script>
+/* ========== DATA ========== */
+const cases=[
+ {t:"No comprendo por qué no tengo activado el Llega Hoy, tenemos casi nulas las ventas con retraso Flex.",a:"R",exp:"El caso real que originó este reto. Aunque dice 'Flex' y 'retraso', la consulta raíz es el destaque (Llega Hoy) de su publicación. Lo vemos nosotros.",cdu:"Reputación ME Informativas: Por qué no ofrece destaque"},
+ {t:"Tengo 3 publicaciones con el costo de envíos alto en el sitio, no estoy de acuerdo con las dimensiones.",a:"D",exp:"Aquí la consulta raíz sí es de envíos: discrepancia en costos y dimensiones. Lo gestiona Envíos Mature.",cdu:"Derivación correcta → Envíos Mature"},
+ {t:"Quiero saber qué requisitos necesito para que mis publicaciones muestren el destaque de envío rápido.",a:"R",exp:"Consulta informativa sobre cómo funciona el destaque de publicaciones. Es nuestra.",cdu:"Reputación ME Informativas: Todo sobre el destaque de publicaciones"},
+ {t:"Tengo una publicación que está sin Mercado Envíos y quiero agregarla a Mercado Envíos, ya que no me gusta acordar envío con el comprador.",a:"D",exp:"El cliente quiere activar Mercado Envíos en su publicación. Configuración del servicio de envíos: se deriva.",cdu:"Derivación correcta → Envíos Mature"},
+ {t:"Mis competidores tienen la etiqueta de 'Llega mañana' y yo no, ¿por qué si vendemos lo mismo con Flex?",a:"R",exp:"Palabras gatillo por todos lados, pero pregunta por qué no tiene el destaque. Consulta raíz: destaque de publicación.",cdu:"Reputación ME Informativas: Por qué no ofrece destaque"},
+ {t:"Necesito cambiar la zona de cobertura de mis envíos Flex porque me mudé de bodega.",a:"D",exp:"Configuración operativa del servicio Flex. No es destaque ni reputación.",cdu:"Derivación correcta → Envíos Mature"},
+ {t:"Antes mis publicaciones tenían el destaque de Llega Hoy y desapareció. Mis envíos salen siempre a tiempo, ¿es un error de Flex?",a:"R",exp:"El cliente asume que es error de Flex, pero pregunta por qué perdió el destaque. No te dejes llevar por su diagnóstico.",cdu:"Reputación ME Informativas: Por qué no ofrece destaque"},
+ {t:"El sistema me está cobrando el costo de envío Flex más caro de lo acordado en las últimas 5 ventas.",a:"D",exp:"Discrepancia en tarifas del servicio de envío. Operativa pura: se deriva.",cdu:"Derivación correcta → Envíos Mature"},
+ {t:"¿El destaque de publicaciones depende de mi reputación o de qué? Quiero entender cómo funciona para conseguirlo.",a:"R",exp:"Consulta 100% informativa sobre el funcionamiento del destaque.",cdu:"Reputación ME Informativas: Todo sobre el destaque de publicaciones"},
+ {t:"No quiero ver temas de reputación, deseo generar una revisión en mis envíos Flex de hace 4 días.",a:"D",exp:"El cliente lo dice explícito: no es reputación, quiere revisión operativa de sus envíos Flex. Se deriva.",cdu:"Derivación correcta → Envíos Mature"}
+];
+const pIntros=["¿Cuál es la consulta raíz?","Cuidado, este huele a palabras gatillo.","Pregúntate: ¿qué quiere lograr este cliente?","Ni te apresures ni te confíes.","El reino confía en tu criterio."];
+const pOk=["Correcto. Tu criterio brilla.","Bien ahí. La consulta raíz no se te escapó.","Excelente lectura del caso.","Así actúa un caballero del picklist."];
+const pBad=["Derivación incorrecta. La TDI del reino sufre.","Las palabras gatillo te emboscaron.","Caíste en la trampa. Repasemos la consulta raíz.","Esa no era. A levantarse."];
+
+/* ========== STATE ========== */
+let playerName="",score=0,streak=0,errors=0,answered=0;
+let px=0,py=0,vx=0,vy=0,facing=1,faceLerp=1,walkT=0,idleT=0,frozen=false,currentNode=-1;
+const SPEED=3.6,PR=13,NODE_R=46;
+let keys={},nodes=[],rects=[],circles=[],pines=[],rocks=[],torches=[],flags=[],fireflies=[],particles=[],stars=[];
+let W=0,H=0,cv,ctx,DPR=1,t=0,nodeCooldown=0;
+
+/* ========== NAV ========== */
+function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const e=document.getElementById(id);if(e&&e.classList.contains('screen'))e.classList.add('active');}
+function saveName(){const n=document.getElementById('playerName').value.trim();if(!n){alert("Sir Patorius necesita tu nombre.");return;}playerName=n;go('s1');}
+
+/* ========== INPUT ========== */
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=true;if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+addEventListener('blur',()=>keys={});
+document.querySelectorAll('#pad [data-k]').forEach(b=>{
+  const map={up:'arrowup',down:'arrowdown',left:'arrowleft',right:'arrowright'};const k=map[b.dataset.k];
+  b.addEventListener('pointerdown',e=>{e.preventDefault();keys[k]=true;});
+  b.addEventListener('pointerup',()=>keys[k]=false);
+  b.addEventListener('pointerleave',()=>keys[k]=false);
+});
+
+/* ========== WORLD BUILD ========== */
+function R(a,b){return a+Math.random()*(b-a);}
+function buildWorld(){
+  W=innerWidth;H=innerHeight;
+  rects=[];circles=[];nodes=[];pines=[];rocks=[];torches=[];flags=[];fireflies=[];particles=[];stars=[];
+  for(let i=0;i<60;i++)stars.push({x:R(0,W),y:R(0,H*.4),s:R(.5,1.6),ph:R(0,6)});
+  for(let i=0;i<14;i++)fireflies.push({x:R(0,W),y:R(H*.4,H*.95),ph:R(0,6),sp:R(.5,1.2)});
+  // castillo
+  const CW=Math.min(360,W*.36),CX=W/2-CW/2,CY=40,CH=150;
+  rects.push({x:CX+8,y:CY+54,w:CW-16,h:CH-54,castle:{x:CX,y:CY,w:CW,h:CH}});
+  flags.push({x:CX+CW*.16,y:CY+10},{x:CX+CW*.5,y:CY-6},{x:CX+CW*.84,y:CY+10});
+  torches.push({x:CX-30,y:CY+CH-6},{x:CX+CW+30,y:CY+CH-6});
+  // murallas
+  [[W*.05,H*.36,W*.15],[W*.80,H*.36,W*.15],[W*.42,H*.63,W*.16]].forEach(m=>{
+    rects.push({x:m[0],y:m[1],w:m[2],h:20,wall:true});
+    torches.push({x:m[0]+m[2]/2,y:m[1]-2});
+  });
+  // pinos
+  [[W*.10,H*.56],[W*.17,H*.80],[W*.86,H*.60],[W*.77,H*.84],[W*.30,H*.42],[W*.67,H*.44],[W*.93,H*.76]].forEach(p=>{
+    const s=R(44,70);pines.push({x:p[0],y:p[1],s});circles.push({x:p[0],y:p[1]-4,r:s*.16});
+  });
+  // rocas
+  [[W*.24,H*.62,34],[W*.52,H*.48,27],[W*.70,H*.70,38],[W*.38,H*.82,30],[W*.60,H*.88,25],[W*.12,H*.46,23],[W*.88,H*.46,26]].forEach(r=>{
+    rocks.push({x:r[0],y:r[1],r:r[2],seed:Math.random()*10});circles.push({x:r[0],y:r[1],r:r[2]*.72});
+  });
+  // nodos
+  let tries=0;
+  while(nodes.length<10&&tries<800){
+    tries++;
+    const x=R(W*.06,W*.94),y=R(H*.30,H*.90);
+    if(collides(x,y,34))continue;
+    if(nodes.some(n=>Math.hypot(n.x-x,n.y-y)<Math.max(115,W*.085)))continue;
+    if(Math.hypot(x-W/2,y-(H-110))<150)continue;
+    nodes.push({x,y,done:false,ok:false,ph:R(0,6)});
+  }
+  px=W/2;py=H-110;unstick();
+}
+function collides(x,y,r){
+  for(const o of rects)if(x+r>o.x&&x-r<o.x+o.w&&y+r>o.y&&y-r<o.y+o.h)return true;
+  for(const c of circles)if(Math.hypot(x-c.x,y-c.y)<r+c.r)return true;
+  return false;
+}
+function unstick(){
+  if(!collides(px,py,PR))return;
+  for(let rad=10;rad<300;rad+=10)for(let a=0;a<12;a++){
+    const nx=px+Math.cos(a/12*6.283)*rad,ny=py+Math.sin(a/12*6.283)*rad;
+    if(nx>20&&nx<W-20&&ny>80&&ny<H-40&&!collides(nx,ny,PR)){px=nx;py=ny;return;}
+  }
+}
+
+/* ========== GAME START ========== */
+function startGame(){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('gameWrap').classList.add('active');
+  document.getElementById('hudName').textContent=playerName;
+  cv=document.getElementById('cv');ctx=cv.getContext('2d');
+  DPR=Math.min(2,devicePixelRatio||1);
+  resize();addEventListener('resize',resize);
+  buildWorld();
+  requestAnimationFrame(loop);
+  toast("Encuentra los 10 pergaminos del reino");
+}
+function resize(){cv.width=innerWidth*DPR;cv.height=innerHeight*DPR;cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';ctx.setTransform(DPR,0,0,DPR,0,0);}
+function toast(msg){const e=document.getElementById('toast');e.textContent=msg;e.style.opacity=1;clearTimeout(e._t);e._t=setTimeout(()=>e.style.opacity=0,2600);}
+
+/* ========== UPDATE ========== */
+function update(){
+  t+=1/60;
+  if(nodeCooldown>0)nodeCooldown--;
+  if(!frozen){
+    let dx=0,dy=0;
+    if(keys['arrowleft']||keys['a'])dx-=1;
+    if(keys['arrowright']||keys['d'])dx+=1;
+    if(keys['arrowup']||keys['w'])dy-=1;
+    if(keys['arrowdown']||keys['s'])dy+=1;
+    if(dx&&dy){dx*=.707;dy*=.707;}
+    if(dx)facing=dx>0?1:-1;
+    // aceleración suave
+    vx+=(dx*SPEED-vx)*.3;vy+=(dy*SPEED-vy)*.3;
+    const wasColliding=collides(px,py,PR);
+    let nx=Math.max(20,Math.min(W-20,px+vx));
+    if(wasColliding||!collides(nx,py,PR))px=nx;else vx=0;
+    let ny=Math.max(80,Math.min(H-40,py+vy));
+    if(wasColliding||!collides(px,ny,PR))py=ny;else vy=0;
+    const moving=Math.hypot(vx,vy)>.6;
+    if(moving){
+      walkT+=.22;
+      if(Math.random()<.3)particles.push({x:px-facing*8+R(-3,3),y:py+2,vx:R(-.4,.4)-facing*.5,vy:R(-.6,-.1),life:1,s:R(2,4),c:'180,170,150'});
+    }else walkT*=.8;
+    idleT+=1/60;
+    faceLerp+=((facing)-faceLerp)*.25;
+    if(nodeCooldown===0)nodes.forEach((n,i)=>{if(!n.done&&Math.hypot(px-n.x,py-n.y)<NODE_R)openCase(i);});
+  }
+  // partículas
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy-=.01;p.life-=.03;
+    if(p.life<=0)particles.splice(i,1);
+  }
+  // fuego antorchas
+  torches.forEach(to=>{if(Math.random()<.5)particles.push({x:to.x+R(-2,2),y:to.y-38,vx:R(-.3,.3),vy:R(-1.4,-.7),life:R(.4,.9),s:R(2,5),c:Math.random()<.5?'255,160,60':'255,210,100'});});
+}
+
+/* ========== DRAW HELPERS ========== */
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function ell(x,y,rx,ry){ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,6.283);ctx.closePath();}
+
+/* ========== DRAW WORLD ========== */
+function drawGround(){
+  let g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#0a0e18');g.addColorStop(.42,'#101726');g.addColorStop(.75,'#13202а'.replace('а','a'));g.addColorStop(1,'#152419');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  // luna
+  ctx.save();ctx.globalAlpha=.9;
+  let mg=ctx.createRadialGradient(W*.82,H*.10,2,W*.82,H*.10,60);
+  mg.addColorStop(0,'#e8ecf5');mg.addColorStop(.25,'#c9d4e8');mg.addColorStop(.3,'rgba(200,212,232,.25)');mg.addColorStop(1,'transparent');
+  ctx.fillStyle=mg;ctx.fillRect(W*.82-70,H*.10-70,140,140);
+  ctx.restore();
+  // estrellas
+  stars.forEach(s=>{ctx.globalAlpha=.25+.5*Math.abs(Math.sin(t*.8+s.ph));ctx.fillStyle='#b9c8e0';ctx.fillRect(s.x,s.y,s.s,s.s);});
+  ctx.globalAlpha=1;
+  // textura de pasto: manchas suaves
+  ctx.save();ctx.globalAlpha=.05;
+  for(let i=0;i<30;i++){const x=(i*127.3)%W,y=H*.3+((i*211.7)%(H*.68));ctx.fillStyle=i%2?'#3a5c40':'#20304a';ell(x,y,R? (30+(i*13)%50):40,12+(i*7)%18);ctx.fill();}
+  ctx.restore();
+}
+function drawCastle(o){
+  const c=o.castle,x=c.x,y=c.y,w=c.w,h=c.h;
+  // glow base
+  let gl=ctx.createRadialGradient(x+w/2,y+h,10,x+w/2,y+h,w*.7);
+  gl.addColorStop(0,'rgba(255,180,80,.10)');gl.addColorStop(1,'transparent');
+  ctx.fillStyle=gl;ctx.fillRect(x-w*.3,y,w*1.6,h+80);
+  const stone=(xx,yy,ww,hh,light)=>{
+    let g=ctx.createLinearGradient(xx,yy,xx,yy+hh);
+    g.addColorStop(0,light?'#5d6880':'#4b5570');g.addColorStop(1,'#303a52');
+    ctx.fillStyle=g;ctx.fillRect(xx,yy,ww,hh);
+    ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=1;
+    for(let yy2=yy+12;yy2<yy+hh;yy2+=12){ctx.beginPath();ctx.moveTo(xx,yy2);ctx.lineTo(xx+ww,yy2);ctx.stroke();}
+    for(let xx2=xx+18;xx2<xx+ww;xx2+=18){ctx.beginPath();ctx.moveTo(xx2,yy);ctx.lineTo(xx2,yy+hh);ctx.stroke();}
+  };
+  const merlons=(xx,yy,ww)=>{ctx.fillStyle='#525d78';for(let m=xx;m<xx+ww-6;m+=14)ctx.fillRect(m,yy-9,8,10);};
+  // cuerpo central
+  stone(x+w*.18,y+54,w*.64,h-54,false);merlons(x+w*.18,y+54,w*.64);
+  // torres
+  [[x,56],[x+w*.84,56],[x+w*.42,30]].forEach((tw,i)=>{
+    const tx=tw[0],ty=y+tw[1]-26,twd=w*.16,th=h-(tw[1]-26);
+    stone(tx,ty,twd,th,true);merlons(tx,ty,twd);
+    // ventana iluminada con flicker
+    const fl=.75+.25*Math.sin(t*7+i*2.1);
+    ctx.fillStyle=`rgba(255,200,110,${.85*fl})`;
+    rr(tx+twd/2-4,ty+th*.3,8,14,4);ctx.fill();
+    ctx.fillStyle=`rgba(255,190,90,${.12*fl})`;
+    ell(tx+twd/2,ty+th*.3+8,16,20);ctx.fill();
+  });
+  // puerta
+  const gx=x+w/2,gy=y+h;
+  ctx.fillStyle='#161b28';rr(gx-18,gy-46,36,46,16);ctx.fill();
+  ctx.strokeStyle='#2b3447';ctx.lineWidth=3;rr(gx-18,gy-46,36,46,16);ctx.stroke();
+  ctx.strokeStyle='rgba(120,90,50,.5)';ctx.lineWidth=2;
+  for(let i=-12;i<=12;i+=8){ctx.beginPath();ctx.moveTo(gx+i,gy-42);ctx.lineTo(gx+i,gy);ctx.stroke();}
+  // banderas
+  flags.forEach((f,i)=>{
+    ctx.strokeStyle='#8a94a8';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(f.x,f.y-24);ctx.stroke();
+    ctx.fillStyle='#c23b3b';
+    ctx.beginPath();ctx.moveTo(f.x,f.y-24);
+    for(let s=0;s<=10;s++){const xx=f.x+s*1.8,yy=f.y-24+Math.sin(t*6+i+s*.6)*2+s*.2;ctx.lineTo(xx,yy);}
+    for(let s=10;s>=0;s--){const xx=f.x+s*1.8,yy=f.y-14+Math.sin(t*6+i+s*.6)*2+s*.2;ctx.lineTo(xx,yy);}
+    ctx.closePath();ctx.fill();
+  });
+}
+function drawWall(o){
+  let g=ctx.createLinearGradient(o.x,o.y,o.x,o.y+o.h);
+  g.addColorStop(0,'#4b5570');g.addColorStop(1,'#303a52');
+  ctx.fillStyle=g;ctx.fillRect(o.x,o.y,o.w,o.h);
+  ctx.fillStyle='#525d78';
+  for(let m=o.x;m<o.x+o.w-6;m+=14)ctx.fillRect(m,o.y-8,8,9);
+  ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=1;
+  for(let xx=o.x+16;xx<o.x+o.w;xx+=16){ctx.beginPath();ctx.moveTo(xx,o.y);ctx.lineTo(xx,o.y+o.h);ctx.stroke();}
+  ctx.fillStyle='rgba(0,0,0,.35)';ell(o.x+o.w/2,o.y+o.h+4,o.w/2,6);ctx.fill();
+}
+function drawPine(p){
+  ctx.fillStyle='rgba(0,0,0,.4)';ell(p.x,p.y+3,p.s*.42,7);ctx.fill();
+  ctx.fillStyle='#4a3826';ctx.fillRect(p.x-3,p.y-10,6,12);
+  for(let l=0;l<3;l++){
+    const ww=p.s*(.9-l*.22),hh=p.s*.42,yy=p.y-10-l*p.s*.3;
+    let g=ctx.createLinearGradient(p.x-ww/2,0,p.x+ww/2,0);
+    g.addColorStop(0,'#16301e');g.addColorStop(.55,'#2a5236');g.addColorStop(1,'#1a3a24');
+    ctx.fillStyle=g;
+    ctx.beginPath();ctx.moveTo(p.x,yy-hh);ctx.lineTo(p.x+ww/2,yy);ctx.lineTo(p.x-ww/2,yy);ctx.closePath();ctx.fill();
+    // rim light lunar
+    ctx.strokeStyle='rgba(170,200,255,.12)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(p.x,yy-hh);ctx.lineTo(p.x+ww/2,yy);ctx.stroke();
+  }
+}
+function drawRock(r){
+  ctx.fillStyle='rgba(0,0,0,.4)';ell(r.x,r.y+r.r*.5,r.r*1.05,r.r*.3);ctx.fill();
+  let g=ctx.createRadialGradient(r.x-r.r*.4,r.y-r.r*.5,2,r.x,r.y,r.r*1.2);
+  g.addColorStop(0,'#6a758c');g.addColorStop(.5,'#49536a');g.addColorStop(1,'#2e3648');
+  ctx.fillStyle=g;
+  ctx.beginPath();
+  for(let a=0;a<=12;a++){
+    const ang=a/12*6.283,rad=r.r*(1+.14*Math.sin(r.seed+a*2.3));
+    const xx=r.x+Math.cos(ang)*rad,yy=r.y+Math.sin(ang)*rad*.72;
+    a?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);
+  }
+  ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(r.x-r.r*.3,r.y-r.r*.2);ctx.lineTo(r.x+r.r*.15,r.y+r.r*.15);ctx.stroke();
+}
+function drawTorch(to){
+  ctx.fillStyle='#3c2d1e';ctx.fillRect(to.x-2.5,to.y-32,5,32);
+  ctx.fillStyle='#2c2c34';rr(to.x-5,to.y-36,10,6,2);ctx.fill();
+  const fl=.8+.2*Math.sin(t*11+to.x);
+  let g=ctx.createRadialGradient(to.x,to.y-40,2,to.x,to.y-40,55);
+  g.addColorStop(0,`rgba(255,180,80,${.22*fl})`);g.addColorStop(1,'transparent');
+  ctx.fillStyle=g;ctx.fillRect(to.x-55,to.y-95,110,110);
+  let f=ctx.createRadialGradient(to.x,to.y-40,1,to.x,to.y-42,9);
+  f.addColorStop(0,'#fff3c0');f.addColorStop(.4,'#ffb74d');f.addColorStop(1,'rgba(230,80,40,.1)');
+  ctx.fillStyle=f;
+  ell(to.x,to.y-41,5+fl,8+fl*2);ctx.fill();
+}
+function drawNode(n,idx){
+  const bob=Math.sin(t*2.2+n.ph)*3;
+  if(!n.done){
+    // anillo pulsante
+    const pr=(t*1.2+n.ph)%1;
+    ctx.strokeStyle=`rgba(232,185,74,${.7*(1-pr)})`;ctx.lineWidth=2;
+    ell(n.x,n.y+6,18+pr*26,(18+pr*26)*.38);ctx.stroke();
+    // haz de luz
+    let g=ctx.createLinearGradient(0,n.y-70,0,n.y+6);
+    g.addColorStop(0,'rgba(232,185,74,0)');g.addColorStop(1,'rgba(232,185,74,.14)');
+    ctx.fillStyle=g;
+    ctx.beginPath();ctx.moveTo(n.x-7,n.y-66+bob);ctx.lineTo(n.x+7,n.y-66+bob);ctx.lineTo(n.x+17,n.y+6);ctx.lineTo(n.x-17,n.y+6);ctx.closePath();ctx.fill();
+  }
+  ctx.fillStyle='rgba(0,0,0,.4)';ell(n.x,n.y+7,13,4.5);ctx.fill();
+  const yy=n.y-14+(n.done?0:bob);
+  ctx.save();if(n.done){ctx.globalAlpha=.55;}
+  let pg=ctx.createLinearGradient(n.x-11,yy-13,n.x+11,yy+13);
+  pg.addColorStop(0,'#efe2b8');pg.addColorStop(1,'#c7b57e');
+  ctx.fillStyle=pg;rr(n.x-11,yy-12,22,26,3);ctx.fill();
+  ctx.fillStyle='#d9c folds'.length?'#d9c892':'#d9c892';rr(n.x-13,yy-15,26,6,3);ctx.fill();rr(n.x-13,yy+9,26,6,3);ctx.fill();
+  ctx.strokeStyle='#9c8a56';ctx.lineWidth=1;rr(n.x-13,yy-15,26,6,3);ctx.stroke();rr(n.x-13,yy+9,26,6,3);ctx.stroke();
+  ctx.fillStyle='#5a4a22';ctx.font='bold 11px Segoe UI';ctx.textAlign='center';ctx.fillText(idx+1,n.x,yy+4);
+  ctx.restore();
+  if(n.done){
+    ctx.font='bold 15px Segoe UI';ctx.textAlign='center';
+    ctx.fillStyle=n.ok?'#43c768':'#f8635a';
+    ctx.fillText(n.ok?'✓':'✗',n.x,yy-20);
+  }
+}
+
+/* ========== DRAW PLAYER (pato caballero) ========== */
+function drawPlayer(){
+  const moving=Math.hypot(vx,vy)>.6;
+  const bob=moving?Math.abs(Math.sin(walkT))*3:Math.sin(idleT*2)*1.2;
+  const squash=moving?1+Math.sin(walkT*2)*.04:1+Math.sin(idleT*2)*.015;
+  const x=px,y=py;
+  // sombra
+  ctx.fillStyle='rgba(0,0,0,.45)';ell(x,y+2,16-bob*.8,5.5);ctx.fill();
+  ctx.save();
+  ctx.translate(x,y-bob);
+  ctx.scale(faceLerp<0?-1:1,1);
+  const fl=Math.abs(faceLerp);
+  ctx.scale(.6+.4*fl,1); // giro suave al cambiar dirección
+  ctx.scale(1/squash,squash);
+  // patas
+  const l1=moving?Math.sin(walkT)*4:0,l2=moving?-Math.sin(walkT)*4:0;
+  ctx.fillStyle='#ff9636';
+  rr(-9,-4+Math.min(0,l1),8,6,2.5);ctx.fill();
+  rr(2,-4+Math.min(0,l2),8,6,2.5);ctx.fill();
+  // escudo (atrás)
+  ctx.save();ctx.translate(-16,-16);ctx.rotate(-.1+Math.sin(idleT*2)*.03);
+  let sg=ctx.createLinearGradient(0,-10,0,10);
+  sg.addColorStop(0,'#94403c');sg.addColorStop(1,'#64282c');
+  ctx.fillStyle=sg;
+  ctx.beginPath();ctx.moveTo(-7,-9);ctx.lineTo(7,-9);ctx.lineTo(7,2);ctx.quadraticCurveTo(7,10,0,12);ctx.quadraticCurveTo(-7,10,-7,2);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#c9a35a';ctx.lineWidth=2;ctx.stroke();
+  ctx.strokeStyle='#c9a35a';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,-6);ctx.lineTo(0,8);ctx.moveTo(-4,0);ctx.lineTo(4,0);ctx.stroke();
+  ctx.restore();
+  // cuerpo
+  let bg=ctx.createRadialGradient(-4,-22,4,0,-16,20);
+  bg.addColorStop(0,'#ffe27e');bg.addColorStop(.6,'#f8c94e');bg.addColorStop(1,'#d9a52e');
+  ctx.fillStyle=bg;
+  ell(0,-16,15,16);ctx.fill();
+  // peto
+  let pg=ctx.createLinearGradient(0,-20,0,-4);
+  pg.addColorStop(0,'#c3cfdf');pg.addColorStop(.6,'#8b9ab0');pg.addColorStop(1,'#6b7a90');
+  ctx.fillStyle=pg;
+  ctx.beginPath();ctx.ellipse(0,-11,13,10,0,-.15*3.14,1.15*3.14);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#54637a';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(0,-3);ctx.stroke();
+  ctx.fillStyle='#54637a';for(const ry of[-14,-9])for(const rx of[-8,8]){ell(rx,ry,1.2,1.2);ctx.fill();}
+  // espada (delante)
+  ctx.save();ctx.translate(17,-14);ctx.rotate(.22+(moving?Math.sin(walkT)*.12:Math.sin(idleT*2)*.04));
+  let swg=ctx.createLinearGradient(-2,0,2,0);
+  swg.addColorStop(0,'#f0f4fa');swg.addColorStop(.5,'#c3cfdf');swg.addColorStop(1,'#8b9ab0');
+  ctx.fillStyle=swg;
+  ctx.beginPath();ctx.moveTo(-2.4,2);ctx.lineTo(-1.6,-20);ctx.lineTo(0,-24);ctx.lineTo(1.6,-20);ctx.lineTo(2.4,2);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(0,-22);ctx.lineTo(0,0);ctx.stroke();
+  ctx.fillStyle='#c9a35a';rr(-6,2,12,3,1.5);ctx.fill();
+  ctx.fillStyle='#4e3d20';rr(-1.8,5,3.6,7,1.5);ctx.fill();
+  ctx.fillStyle='#c9a35a';ell(0,13.5,2.8,2.8);ctx.fill();
+  ctx.restore();
+  // cabeza: yelmo
+  let hg=ctx.createLinearGradient(0,-42,0,-26);
+  hg.addColorStop(0,'#dde6f2');hg.addColorStop(.55,'#a9b8cc');hg.addColorStop(1,'#7d8ca2');
+  ctx.fillStyle=hg;
+  ell(0,-34,12.5,11);ctx.fill();
+  ctx.fillStyle='#8d9cb2';rr(-13,-34,26,7,3);ctx.fill();
+  // visera oscura
+  ctx.fillStyle='#10151f';rr(-10,-33,20,5.5,2.8);ctx.fill();
+  // ojos brillando
+  const blink=(Math.sin(idleT*1.3)>.97)?.2:1;
+  ctx.fillStyle=`rgba(255,215,130,${blink})`;
+  ell(-4.5,-30.3,1.8,1.9*blink);ctx.fill();ell(4.5,-30.3,1.8,1.9*blink);ctx.fill();
+  ctx.fillStyle='rgba(255,215,130,.25)';ell(-4.5,-30.3,3.5,3.5);ctx.fill();ell(4.5,-30.3,3.5,3.5);ctx.fill();
+  // pico bajo visera
+  ctx.fillStyle='#f5962e';
+  ctx.beginPath();ctx.moveTo(-6,-26);ctx.quadraticCurveTo(0,-20.5,6,-26);ctx.quadraticCurveTo(0,-23.5,-6,-26);ctx.closePath();ctx.fill();
+  // penacho
+  ctx.save();ctx.translate(0,-44);ctx.rotate(Math.sin(t*4)*.12+(moving?Math.sin(walkT)*.1:0));
+  let plg=ctx.createLinearGradient(0,-12,0,0);
+  plg.addColorStop(0,'#ff6b5e');plg.addColorStop(1,'#b22e2e');
+  ctx.fillStyle=plg;
+  ctx.beginPath();ctx.moveTo(-2.5,2);ctx.quadraticCurveTo(-4,-8,0,-13);ctx.quadraticCurveTo(4,-8,2.5,2);ctx.closePath();ctx.fill();
+  ctx.restore();
+  ctx.restore();
+}
+
+/* ========== RENDER ========== */
+function render(){
+  drawGround();
+  // haces y anillos bajo todo
+  // entidades ordenadas por Y (profundidad)
+  const ents=[];
+  rects.forEach(o=>ents.push({y:o.y+o.h,draw:()=>o.castle?drawCastle(o):drawWall(o)}));
+  pines.forEach(p=>ents.push({y:p.y,draw:()=>drawPine(p)}));
+  rocks.forEach(r=>ents.push({y:r.y+r.r*.5,draw:()=>drawRock(r)}));
+  torches.forEach(to=>ents.push({y:to.y,draw:()=>drawTorch(to)}));
+  nodes.forEach((n,i)=>ents.push({y:n.y,draw:()=>drawNode(n,i)}));
+  ents.push({y:py,draw:drawPlayer});
+  ents.sort((a,b)=>a.y-b.y).forEach(e=>e.draw());
+  // partículas
+  particles.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life)*.8;ctx.fillStyle=`rgb(${p.c})`;ell(p.x,p.y,p.s*p.life,p.s*p.life);ctx.fill();});
+  ctx.globalAlpha=1;
+  // luciérnagas
+  fireflies.forEach(f=>{
+    const a=.3+.6*Math.abs(Math.sin(t*f.sp+f.ph));
+    const fx=f.x+Math.sin(t*.7+f.ph)*22,fy=f.y+Math.cos(t*.5+f.ph)*14;
+    ctx.fillStyle=`rgba(255,235,150,${a})`;ell(fx,fy,2,2);ctx.fill();
+    ctx.fillStyle=`rgba(255,235,150,${a*.18})`;ell(fx,fy,7,7);ctx.fill();
+  });
+  // viñeta
+  let v=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.35,W/2,H/2,Math.max(W,H)*.75);
+  v.addColorStop(0,'transparent');v.addColorStop(1,'rgba(0,0,0,.55)');
+  ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+}
+function loop(){update();render();requestAnimationFrame(loop);}
+
+/* ========== CASOS ========== */
+function openCase(idx){
+  frozen=true;currentNode=idx;keys={};vx=vy=0;
+  const c=cases[idx];
+  document.getElementById('mLabel').textContent='Pergamino '+(answered+1)+' de '+cases.length;
+  document.getElementById('mPato').innerHTML='<b>Sir Patorius:</b> '+pIntros[Math.floor(Math.random()*pIntros.length)];
+  document.getElementById('mCase').textContent='"'+c.t+'"';
+  document.getElementById('mBtns').style.display='flex';
+  const fb=document.getElementById('mFb');fb.style.display='none';fb.className='fb';
+  document.getElementById('mNext').style.display='none';
+  document.getElementById('modal').classList.add('active');
+}
+function answer(choice){
+  const c=cases[currentNode],ok=choice===c.a,fb=document.getElementById('mFb');
+  document.getElementById('mBtns').style.display='none';
+  if(ok){
+    streak++;let pts=10,bonus='';
+    if(streak%3===0){pts+=5;bonus=' (+5 bonus por racha de '+streak+')';}
+    score+=pts;
+    fb.className='fb ok';
+    fb.innerHTML='<b>Correcto. +'+pts+' pts'+bonus+'</b><br>'+c.exp+'<br><span class="cdu">'+c.cdu+'</span>';
+    document.getElementById('mPato').innerHTML='<b>Sir Patorius:</b> '+pOk[Math.floor(Math.random()*pOk.length)];
+  }else{
+    streak=0;errors++;
+    fb.className='fb bad';
+    fb.innerHTML='<b>Derivación incorrecta. Tu TDI sufre.</b><br>'+c.exp+'<br><span class="cdu">'+c.cdu+'</span>';
+    document.getElementById('mPato').innerHTML='<b>Sir Patorius:</b> '+pBad[Math.floor(Math.random()*pBad.length)];
+  }
+  const n=nodes[currentNode];n.done=true;n.ok=ok;
+  answered++;
+  document.getElementById('hudScore').textContent=score;
+  document.getElementById('hudStreakV').textContent=streak;
+  document.getElementById('hudProg').textContent=answered+'/'+cases.length;
+  fb.style.display='block';
+  const nxt=document.getElementById('mNext');
+  nxt.style.display='block';
+  nxt.textContent=answered===cases.length?'Ver resultado final':'Volver al reino';
+}
+function closeModal(){
+  document.getElementById('modal').classList.remove('active');
+  if(document.activeElement)document.activeElement.blur(); // libera el foco del botón
+  keys={};vx=vy=0;nodeCooldown=50;                        // reset input + cooldown anti-reapertura
+  unstick();                                               // garantiza posición libre
+  frozen=false;
+  if(answered===cases.length)showResult();
+}
+
+/* ========== RANKING ========== */
+const RK_KEY='rankingPatoriusV4';
+function getRanking(){try{return JSON.parse(localStorage.getItem(RK_KEY))||[];}catch(e){return[];}}
+function saveToRanking(e){const r=getRanking();r.push(e);r.sort((a,b)=>b.score-a.score||a.tdi-b.tdi);localStorage.setItem(RK_KEY,JSON.stringify(r));return r;}
+function clearRanking(){if(confirm('¿Borrar todo el ranking? No se puede deshacer.')){localStorage.removeItem(RK_KEY);location.reload();}}
+function showResult(){
+  document.getElementById('gameWrap').classList.remove('active');
+  go('result');
+  const tdi=+(errors/cases.length*100).toFixed(1);
+  document.getElementById('rSub').textContent=playerName+' · '+score+' pts · '+(cases.length-errors)+'/'+cases.length+' aciertos';
+  const t2=document.getElementById('rTdi');
+  t2.textContent='TDI simulada: '+tdi+'%';
+  t2.className='tdiBig '+(tdi<=5?'tOk':'tBad');
+  let msg;
+  if(errors===0)msg='<b>Sir Patorius:</b> TDI 0%. Te nombro Caballero del Picklist. Ni una palabra gatillo te engañó.';
+  else if(tdi<=5)msg='<b>Sir Patorius:</b> Dentro del target (≤5%). Gran manejo de la consulta raíz.';
+  else if(tdi<=20)msg='<b>Sir Patorius:</b> Fuera del target (≤5%). Las palabras gatillo te emboscaron. Pregunta antes de derivar.';
+  else msg='<b>Sir Patorius:</b> TDI alta. Repasa: no derives por palabras, deriva por consulta raíz.';
+  document.getElementById('rMsg').innerHTML=msg;
+  const me={name:playerName,score:score,tdi:tdi,hits:cases.length-errors,date:new Date().toLocaleDateString()};
+  const r=saveToRanking(me);
+  const podio=document.getElementById('podio');podio.innerHTML='';
+  const medal=['1°','2°','3°'],cls=['pod2','pod1','pod3'],order=[1,0,2];
+  order.forEach((pos,k)=>{if(r[pos])podio.innerHTML+='<div class="pod '+cls[k]+'">'+medal[pos]+'<br>'+r[pos].name+'<br>'+r[pos].score+' pts</div>';});
+  let html='<tr><th>#</th><th>Jugador</th><th>Pts</th><th>TDI</th><th>Aciertos</th><th>Fecha</th></tr>';
+  r.forEach((e,idx)=>{
+    const isMe=(e.name===me.name&&e.score===me.score&&e.date===me.date);
+    html+='<tr'+(isMe?' class="me"':'')+'><td>'+(idx+1)+'</td><td>'+e.name+'</td><td>'+e.score+'</td><td>'+e.tdi+'%</td><td>'+e.hits+'/10</td><td>'+e.date+'</td></tr>';
+  });
+  document.getElementById('rkTable').innerHTML=html;
+}
+
+/* ========== AVATARES EN PANELES ========== */
+document.querySelectorAll('canvas.avatar').forEach(c=>{
+  const a=c.getContext('2d');
+  a.translate(26,52);
+  // mini versión estática del caballero
+  a.fillStyle='rgba(0,0,0,.4)';a.beginPath();a.ellipse(0,2,14,4,0,0,7);a.fill();
+  let bg=a.createRadialGradient(-3,-20,3,0,-14,18);
+  bg.addColorStop(0,'#ffe27e');bg.addColorStop(1,'#d9a52e');
+  a.fillStyle=bg;a.beginPath();a.ellipse(0,-14,13,14,0,0,7);a.fill();
+  let pg=a.createLinearGradient(0,-18,0,-4);
+  pg.addColorStop(0,'#c3cfdf');pg.addColorStop(1,'#6b7a90');
+  a.fillStyle=pg;a.beginPath();a.ellipse(0,-9,11,8,0,0,7);a.fill();
+  let hg=a.createLinearGradient(0,-38,0,-24);
+  hg.addColorStop(0,'#dde6f2');hg.addColorStop(1,'#7d8ca2');
+  a.fillStyle=hg;a.beginPath();a.ellipse(0,-30,11,10,0,0,7);a.fill();
+  a.fillStyle='#10151f';a.fillRect(-9,-32,18,5);
+  a.fillStyle='#ffd782';a.beginPath();a.ellipse(-4,-29.5,1.6,1.7,0,0,7);a.fill();a.beginPath();a.ellipse(4,-29.5,1.6,1.7,0,0,7);a.fill();
+  a.fillStyle='#f5962e';a.beginPath();a.moveTo(-5,-23);a.quadraticCurveTo(0,-18.5,5,-23);a.quadraticCurveTo(0,-21,-5,-23);a.fill();
+  a.fillStyle='#c23b3b';a.beginPath();a.moveTo(-2,-39);a.quadraticCurveTo(0,-48,2,-39);a.fill();
+});
+</script>
+</body>
+</html>
